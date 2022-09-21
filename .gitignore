@@ -1,6 +1,11 @@
 # Created by https://www.toptal.com/developers/gitignore/api/maven,apachehadoop,java,spark,scala
 # Edit at https://www.toptal.com/developers/gitignore?templates=maven,apachehadoop,java,spark,scala
 
+### CS451 specifics ###
+check_assignment*
+data
+cs451-*
+
 ### ApacheHadoop ###
 *.iml
 *.ipr
