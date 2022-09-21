@@ -166,8 +166,7 @@ public class StripesPMI extends Configured implements Tool {
 
   private static final class MyReducer2 extends Reducer<Text, HMapStFW, Text, HashMapWritable> {
     private static final HashMapWritable<Text, PairOfFloatInt> WORD = new HashMapWritable<>();
-    private static final PairOfFloatInt PMICOUNT = new PairOfFloatInt();
-    private static Map<String, Integer> wcMap = new HashMap<>();
+    private static final Map<String, Integer> wcMap = new HashMap<>();
     private static long lineCnt = 1l;
     private static int threshold = 10;
 
@@ -223,8 +222,8 @@ public class StripesPMI extends Configured implements Tool {
           float numerator = xyCount / lineCnt;
           float denominator = (xCount / lineCnt) * (yCount / lineCnt);
           float pmi = (float) Math.log10(numerator / denominator);
-          PMICOUNT.set(pmi, (int) xyCount);
-          WORD.put(new Text(y), PMICOUNT);
+          PairOfFloatInt pmiCount = new PairOfFloatInt(pmi, (int) xyCount);
+          WORD.put(new Text(y), pmiCount);
           valid = true;
         }
       }
