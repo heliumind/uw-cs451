@@ -34,7 +34,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.ParserProperties;
-import tl.lin.data.pair.PairOfFloats;
+import tl.lin.data.pair.PairOfFloatInt;
 import tl.lin.data.pair.PairOfStrings;
 
 import java.io.BufferedReader;
@@ -144,8 +144,8 @@ public class PairsPMI extends Configured implements Tool {
     }
   }
 
-  private static final class MyReducer2 extends Reducer<PairOfStrings, IntWritable, PairOfStrings, PairOfFloats> {
-    private static final PairOfFloats PMI = new PairOfFloats();
+  private static final class MyReducer2 extends Reducer<PairOfStrings, IntWritable, PairOfStrings, PairOfFloatInt> {
+    private static final PairOfFloatInt PMICOUNT = new PairOfFloatInt();
     private static Map<String, Integer> wcMap = new HashMap<>();
     private static long lineCnt = 1l;
     private static int threshold = 10;
@@ -199,8 +199,8 @@ public class PairsPMI extends Configured implements Tool {
         float numerator = xyCount / lineCnt;
         float denominator = (xCount / lineCnt) * (yCount / lineCnt);
         float pmi = (float) Math.log10(numerator / denominator);
-        PMI.set(pmi, xyCount);
-        context.write(key, PMI);
+        PMICOUNT.set(pmi, (int) xyCount);
+        context.write(key, PMICOUNT);
       }
     }
   }
@@ -304,7 +304,7 @@ public class PairsPMI extends Configured implements Tool {
     job2.setMapOutputKeyClass(PairOfStrings.class);
     job2.setMapOutputValueClass(IntWritable.class);
     job2.setOutputKeyClass(PairOfStrings.class);
-    job2.setOutputValueClass(PairOfFloats.class);
+    job2.setOutputValueClass(PairOfFloatInt.class);
     job2.setOutputFormatClass(TextOutputFormat.class);
 
     job2.setMapperClass(MyMapper2.class);

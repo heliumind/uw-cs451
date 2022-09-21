@@ -39,6 +39,7 @@ import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.ParserProperties;
 import tl.lin.data.map.HMapStFW;
 import tl.lin.data.map.HashMapWritable;
+import tl.lin.data.pair.PairOfFloatInt;
 import tl.lin.data.pair.PairOfFloats;
 
 import java.io.BufferedReader;
@@ -164,8 +165,8 @@ public class StripesPMI extends Configured implements Tool {
   }
 
   private static final class MyReducer2 extends Reducer<Text, HMapStFW, Text, HashMapWritable> {
-    private static final HashMapWritable<Text, PairOfFloats> WORD = new HashMapWritable<>();
-    private static final PairOfFloats PMI = new PairOfFloats();
+    private static final HashMapWritable<Text, PairOfFloatInt> WORD = new HashMapWritable<>();
+    private static final PairOfFloatInt PMICOUNT = new PairOfFloatInt();
     private static Map<String, Integer> wcMap = new HashMap<>();
     private static long lineCnt = 1l;
     private static int threshold = 10;
@@ -222,8 +223,8 @@ public class StripesPMI extends Configured implements Tool {
           float numerator = xyCount / lineCnt;
           float denominator = (xCount / lineCnt) * (yCount / lineCnt);
           float pmi = (float) Math.log10(numerator / denominator);
-          PMI.set(pmi, xyCount);
-          WORD.put(new Text(y), PMI);
+          PMICOUNT.set(pmi, (int) xyCount);
+          WORD.put(new Text(y), PMICOUNT);
           valid = true;
         }
       }
