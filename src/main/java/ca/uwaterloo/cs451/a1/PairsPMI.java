@@ -275,6 +275,12 @@ public class PairsPMI extends Configured implements Tool {
     job1.setMapperClass(MyMapper1.class);
     job1.setReducerClass(MyReducer1.class);
 
+    job1.getConfiguration().setInt("mapred.max.split.size", 1024 * 1024 * 32);
+    job1.getConfiguration().set("mapreduce.map.memory.mb", "3072");
+    job1.getConfiguration().set("mapreduce.map.java.opts", "-Xmx3072m");
+    job1.getConfiguration().set("mapreduce.reduce.memory.mb", "3072");
+    job1.getConfiguration().set("mapreduce.reduce.java.opts", "-Xmx3072m");
+
     long startTime = System.currentTimeMillis();
     job1.waitForCompletion(true);
 
@@ -321,6 +327,12 @@ public class PairsPMI extends Configured implements Tool {
       LOG.info("File Not Added");
       System.exit(1);
     }
+
+    job2.getConfiguration().setInt("mapred.max.split.size", 1024 * 1024 * 32);
+    job2.getConfiguration().set("mapreduce.map.memory.mb", "3072");
+    job2.getConfiguration().set("mapreduce.map.java.opts", "-Xmx3072m");
+    job2.getConfiguration().set("mapreduce.reduce.memory.mb", "3072");
+    job2.getConfiguration().set("mapreduce.reduce.java.opts", "-Xmx3072m");
 
     long startTime2 = System.currentTimeMillis();
     job2.waitForCompletion(true);
