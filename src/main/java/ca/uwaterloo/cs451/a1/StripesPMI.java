@@ -17,6 +17,7 @@
 package ca.uwaterloo.cs451.a1;
 
 import io.bespin.java.util.Tokenizer;
+import org.apache.commons.math.linear.SparseRealVector;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +40,7 @@ import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.ParserProperties;
 import tl.lin.data.map.HMapStFW;
 import tl.lin.data.map.HashMapWritable;
+import tl.lin.data.map.MapKF;
 import tl.lin.data.pair.PairOfFloatInt;
 import tl.lin.data.pair.PairOfFloats;
 
@@ -46,10 +48,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class StripesPMI extends Configured implements Tool {
@@ -125,20 +124,25 @@ public class StripesPMI extends Configured implements Tool {
       List<String> tokensDedup = tokens.stream().distinct().collect(Collectors.toList());
 
       if (tokensDedup.size() < 2) return;
-      for (int i = 1; i < tokensDedup.size(); i++) {
-        String prev = tokensDedup.get(i - 1);
-        String cur = tokensDedup.get(i);
-        if (stripes.containsKey(prev)) {
-          HMapStFW stripe = stripes.get(prev);
-          if (stripe.containsKey(cur)) {
-            stripe.put(cur, stripe.get(cur) + 1.0f);
+      for (int i = 0; i < tokensDedup.size(); i++) {
+        for (int j = 0; j < tokensDedup.size(); j++) {
+          if (i == j) continue;
+
+          String prev = tokensDedup.get(i);
+          String cur = tokensDedup.get(j);
+          if (stripes.containsKey(prev)) {
+            HMapStFW stripe = stripes.get(prev);
+            if (stripe.containsKey(cur)) {
+              stripe.put(cur, stripe.get(cur) + 1.0f);
+            } else {
+              stripe.put(cur, 1.0f);
+            }
           } else {
+            HMapStFW stripe = new HMapStFW();
             stripe.put(cur, 1.0f);
+            stripes.put(prev, stripe);
           }
-        } else {
-          HMapStFW stripe = new HMapStFW();
-          stripe.put(cur, 1.0f);
-          stripes.put(prev, stripe);
+
         }
       }
 
@@ -146,6 +150,7 @@ public class StripesPMI extends Configured implements Tool {
         TEXT.set(t);
         context.write(TEXT, stripes.get(t));
       }
+
     }
   }
 
@@ -198,6 +203,7 @@ public class StripesPMI extends Configured implements Tool {
           e.printStackTrace();
         }
       }
+
     }
 
     @Override
@@ -210,6 +216,7 @@ public class StripesPMI extends Configured implements Tool {
         map.plus(iter.next());
       }
 
+      WORD.clear();
       boolean valid = false;
       // Calculate PMI for every stripe
       String x = key.toString();
@@ -222,7 +229,8 @@ public class StripesPMI extends Configured implements Tool {
           float numerator = xyCount / lineCnt;
           float denominator = (xCount / lineCnt) * (yCount / lineCnt);
           float pmi = (float) Math.log10(numerator / denominator);
-          PairOfFloatInt pmiCount = new PairOfFloatInt(pmi, (int) xyCount);
+          PairOfFloatInt pmiCount = new PairOfFloatInt();
+          pmiCount.set(pmi, (int) xyCount);
           WORD.put(new Text(y), pmiCount);
           valid = true;
         }
