@@ -118,12 +118,15 @@ public class PairsPMI extends Configured implements Tool {
       tokens = tokens.subList(0, Math.min(MAX_NUM_WORDS, tokens.size()));
       List<String> tokensDedup = tokens.stream().distinct().collect(Collectors.toList());
 
-      if (tokensDedup.size() < 2) return;
-      for (int i = 1; i < tokensDedup.size(); i++) {
-        String prev = tokensDedup.get(i - 1);
-        String cur = tokensDedup.get(i);
-        BIGRAM.set(prev, cur);
-        context.write(BIGRAM, ONE);
+      for (int i = 0; i < tokensDedup.size(); i++) {
+        for (int j = i + 1; j < tokensDedup.size(); j++) {
+          String prev = tokensDedup.get(i);
+          String cur = tokensDedup.get(j);
+          BIGRAM.set(prev, cur);
+          context.write(BIGRAM, ONE);
+          BIGRAM.set(cur, prev);
+          context.write(BIGRAM, ONE);
+        }
       }
     }
   }
