@@ -9,11 +9,17 @@ import org.apache.spark.SparkConf
 import org.apache.spark.Partitioner
 import org.rogach.scallop._
 
-class PartitionerStripes(numPartions: Int) extends Partitioner {
-  override def numPartitions: Int = numPartions
+class PartitionerStripes(numParts: Int) extends Partitioner {
+  override def numPartitions: Int = numParts
   override def getPartition(key: Any): Int = {
     val pair = key.asInstanceOf[(String)]
-    (pair.hashCode() & Integer.MAX_VALUE) % numPartions
+    (pair.hashCode() & Integer.MAX_VALUE) % numPartitions
+  }
+  override def equals(other: Any): Boolean = other match {
+    case partitioner: PartitionerStripes =>
+      partitioner.numPartitions == numPartitions
+    case _ =>
+      false
   }
 }
 

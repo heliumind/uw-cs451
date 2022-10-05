@@ -17,11 +17,17 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
   verify()
 }
 
-class PartitionerPairs(numPartions: Int) extends Partitioner {
-  override def numPartitions: Int = numPartions
+class PartitionerPairs(numParts: Int) extends Partitioner {
+  override def numPartitions: Int = numParts
   override def getPartition(key: Any): Int = {
     val pair = key.asInstanceOf[(String, String)]
-    (pair._1.hashCode() & Integer.MAX_VALUE) % numPartions
+    (pair._1.hashCode() & Integer.MAX_VALUE) % numPartitions
+  }
+  override def equals(other: Any): Boolean = other match {
+    case partitioner: PartitionerPairs =>
+      partitioner.numPartitions == numPartitions
+    case _ =>
+      false
   }
 }
 
