@@ -5,6 +5,7 @@
 check_assignment*
 data
 cs451-*
+exports.sh
 
 ### ApacheHadoop ###
 *.iml
