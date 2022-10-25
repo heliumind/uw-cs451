@@ -35,12 +35,10 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.ParserProperties;
-import tl.lin.data.array.ArrayListWritable;
 import tl.lin.data.fd.Object2IntFrequencyDistribution;
 import tl.lin.data.fd.Object2IntFrequencyDistributionEntry;
 import tl.lin.data.pair.PairOfObjectInt;
 import tl.lin.data.pair.PairOfStringInt;
-import tl.lin.data.pair.PairOfWritables;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
@@ -51,9 +49,9 @@ import java.util.List;
 public class BuildInvertedIndexCompressed extends Configured implements Tool {
     private static final Logger LOG = Logger.getLogger(BuildInvertedIndexCompressed.class);
 
-    private static final class MyMapper extends Mapper<LongWritable, Text, PairOfStringInt, VIntWritable> {
+    private static final class MyMapper extends Mapper<LongWritable, Text, PairOfStringInt, IntWritable> {
         private static final PairOfStringInt TERM_ID = new PairOfStringInt();
-        private static final VIntWritable FREQ = new VIntWritable();
+        private static final IntWritable FREQ = new IntWritable();
         private static final Object2IntFrequencyDistribution<String> COUNTS =
                 new Object2IntFrequencyDistributionEntry<>();
 
@@ -77,74 +75,72 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
         }
     }
 
-    private static final class MyPartitioner extends Partitioner<PairOfStringInt, VIntWritable> {
+    private static final class MyPartitioner extends Partitioner<PairOfStringInt, IntWritable> {
         @Override
-        public int getPartition(PairOfStringInt key, VIntWritable value, int numReduceTasks) {
+        public int getPartition(PairOfStringInt key, IntWritable value, int numReduceTasks) {
             return (key.getLeftElement().hashCode() & Integer.MAX_VALUE) % numReduceTasks;
         }
     }
 
     private static final class MyReducer extends
-            Reducer<PairOfStringInt, VIntWritable, Text, BytesWritable> {
-        private static final BytesWritable BYTES = new BytesWritable();
-        private static final ArrayListWritable<PairOfWritables<VIntWritable, VIntWritable>> postings = new ArrayListWritable<>();
-        private static final Text T_PREV = new Text("");
-        private static final VIntWritable DID_PREV = new VIntWritable(0);
+            Reducer<PairOfStringInt, IntWritable, Text, BytesWritable> {
+        private static final Text TEXT = new Text();
 
         private static final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
         private static final DataOutputStream dataStream = new DataOutputStream(byteArrayStream);
 
+        int df = 0;
+        String prevTerm = "";
+        int prevDocID = 0;
+
         @Override
-        public void reduce(PairOfStringInt key, Iterable<VIntWritable> values, Context context)
+        public void reduce(PairOfStringInt key, Iterable<IntWritable> values, Context context)
                 throws IOException, InterruptedException {
-            if (!T_PREV.toString().equals("") && !key.getLeftElement().equals(T_PREV.toString())) {
-                for (PairOfWritables<VIntWritable, VIntWritable> pair : postings) {
-                    // Write first docID (left) and frequency (right)
-                    pair.getLeftElement().write(dataStream);
-                    pair.getRightElement().write(dataStream);
-                }
-                postings.clear();
+            if (!prevTerm.equals("") && !key.getLeftElement().equals(prevTerm)) {
+                byteArrayStream.flush();
+                dataStream.flush();
+
+                ByteArrayOutputStream byteArrayBuf = new ByteArrayOutputStream(byteArrayStream.size());
+                DataOutputStream dataBuf = new DataOutputStream(byteArrayBuf);
+                WritableUtils.writeVInt(dataBuf, df);
+                dataBuf.write(byteArrayStream.toByteArray());
 
                 // EMIT postings
-                BYTES.set(byteArrayStream.toByteArray(), 0, byteArrayStream.size());
-                context.write(T_PREV, BYTES);
+                TEXT.set(prevTerm);
+                context.write(TEXT, new BytesWritable(byteArrayBuf.toByteArray()));
 
-                // Reset streams and DID_PREV
-                DID_PREV.set(0);
+                prevDocID = 0;
+                df = 0;
                 byteArrayStream.reset();
-                dataStream.flush();
             }
 
-            Iterator<VIntWritable> iter = values.iterator();
+            Iterator<IntWritable> iter = values.iterator();
 
-            int tf = 0;
             while (iter.hasNext()) {
-                tf += iter.next().get();
+                int delta = key.getRightElement() - prevDocID;
+                WritableUtils.writeVInt(dataStream, delta);
+                WritableUtils.writeVInt(dataStream, iter.next().get());
+                prevDocID = key.getRightElement();
+                df++;
             }
 
-            int delta = key.getRightElement() - DID_PREV.get();
-
-            VIntWritable TF = new VIntWritable(tf);
-            VIntWritable DELTA = new VIntWritable(delta);
-            postings.add(new PairOfWritables<>(DELTA, TF));
-
-            DID_PREV.set(key.getRightElement());
-            T_PREV.set(key.getLeftElement());
+            prevTerm = key.getLeftElement();
         }
 
         @Override
         public void cleanup(Context context) throws IOException, InterruptedException {
-            for (PairOfWritables<VIntWritable, VIntWritable> pair : postings) {
-                // Write first docID (left) and frequency (right)
-                pair.getLeftElement().write(dataStream);
-                pair.getRightElement().write(dataStream);
-            }
-            postings.clear();
-            BYTES.set(byteArrayStream.toByteArray(), 0, byteArrayStream.size());
-            if (DID_PREV.get() > 0) context.write(T_PREV, BYTES);
-            DID_PREV.set(0);
-            byteArrayStream.reset();
+            byteArrayStream.flush();
             dataStream.flush();
+
+            ByteArrayOutputStream byteArrayBuf = new ByteArrayOutputStream(byteArrayStream.size());
+            DataOutputStream dataBuf = new DataOutputStream(byteArrayBuf);
+            WritableUtils.writeVInt(dataBuf, df);
+            dataBuf.write(byteArrayStream.toByteArray());
+            TEXT.set(prevTerm);
+            context.write(TEXT, new BytesWritable(byteArrayBuf.toByteArray()));
+
+            dataStream.close();
+            byteArrayStream.close();
         }
     }
 
@@ -192,7 +188,7 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
         FileOutputFormat.setOutputPath(job, new Path(args.output));
 
         job.setMapOutputKeyClass(PairOfStringInt.class);
-        job.setMapOutputValueClass(VIntWritable.class);
+        job.setMapOutputValueClass(IntWritable.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(BytesWritable.class);
         job.setOutputFormatClass(MapFileOutputFormat.class);
