@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import tl.lin.data.array.ArrayListOfFloatsWritable;
 import tl.lin.data.array.ArrayListOfIntsWritable;
 
 import java.io.IOException;
@@ -79,6 +78,7 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
             }
 
             node.setType(PageRankNode.Type.Complete);
+            node.setPageRank(Float.NEGATIVE_INFINITY);
         }
 
         @Override
@@ -90,15 +90,9 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
             nid.set(nodeID);
 
             // Check if current node is a source node
-            ArrayListOfFloatsWritable pagerank = new ArrayListOfFloatsWritable();
-            for (int srcnid : srcsNID) {
-                if (srcnid == nodeID) {
-                    pagerank.add((float) -StrictMath.log(srcsNID.size()));
-                } else {
-                    pagerank.add(Float.NEGATIVE_INFINITY);
-                }
+            if (srcsNID.contains(nid)) {
+                node.setPageRank((float) -StrictMath.log(srcsNID.size()));
             }
-            node.setPageRank(pagerank);
 
             if (arr.length == 1) {
                 node.setNodeId(Integer.parseInt(arr[0]));
@@ -159,7 +153,8 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
             return -1;
         }
 
-        if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(NUM_NODES) || !cmdline.hasOption(SRC_NODES)) {
+        if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) ||
+                !cmdline.hasOption(NUM_NODES) || !cmdline.hasOption(SRC_NODES)) {
             System.out.println("args: " + Arrays.toString(args));
             HelpFormatter formatter = new HelpFormatter();
             formatter.setWidth(120);

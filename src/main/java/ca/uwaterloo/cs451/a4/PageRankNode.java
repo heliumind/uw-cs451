@@ -18,7 +18,6 @@ package ca.uwaterloo.cs451.a4;
 
 import org.apache.hadoop.io.Writable;
 import tl.lin.data.array.ArrayListOfIntsWritable;
-import tl.lin.data.array.ArrayListOfFloatsWritable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -51,7 +50,7 @@ public class PageRankNode implements Writable {
 
   private Type type;
   private int nodeid;
-  private ArrayListOfFloatsWritable pagerank;
+  private float pagerank;
   private ArrayListOfIntsWritable adjacencyList;
 
   public PageRankNode() {}
@@ -64,12 +63,12 @@ public class PageRankNode implements Writable {
     this.nodeid = n;
   }
 
-  public ArrayListOfFloatsWritable getPageRank() {
+  public float getPageRank() {
     return pagerank;
   }
 
-  public void setPageRank(ArrayListOfFloatsWritable list) {
-    this.pagerank = list;
+  public void setPageRank(float pagerank) {
+    this.pagerank = pagerank;
   }
 
   public ArrayListOfIntsWritable getAdjacencyList() {
@@ -101,14 +100,12 @@ public class PageRankNode implements Writable {
     nodeid = in.readInt();
 
     if (type.equals(Type.Mass)) {
-      pagerank = new ArrayListOfFloatsWritable();
-      pagerank.readFields(in);
+      pagerank = in.readFloat();
       return;
     }
 
     if (type.equals(Type.Complete)) {
-      pagerank = new ArrayListOfFloatsWritable();
-      pagerank.readFields(in);
+      pagerank = in.readFloat();
     }
 
     adjacencyList = new ArrayListOfIntsWritable();
@@ -127,12 +124,12 @@ public class PageRankNode implements Writable {
     out.writeInt(nodeid);
 
     if (type.equals(Type.Mass)) {
-      pagerank.write(out);
+      out.writeFloat(pagerank);
       return;
     }
 
     if (type.equals(Type.Complete)) {
-      pagerank.write(out);
+      out.writeFloat(pagerank);
     }
 
     adjacencyList.write(out);
