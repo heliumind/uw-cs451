@@ -186,7 +186,7 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
         job.setJobName(BuildInvertedIndexCompressed.class.getSimpleName());
         job.setJarByClass(BuildInvertedIndexCompressed.class);
 
-        job.setNumReduceTasks(1);
+        job.setNumReduceTasks(args.numReducers);
 
         FileInputFormat.setInputPaths(job, new Path(args.input));
         FileOutputFormat.setOutputPath(job, new Path(args.output));
