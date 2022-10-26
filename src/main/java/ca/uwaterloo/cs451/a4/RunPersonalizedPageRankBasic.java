@@ -70,7 +70,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(RunPersonalizedPageRankBasic.class);
 
   private static final String SRC_NODES_FIELD = "sources";
-  private static final int SOURCES_KEY = -1;
+  private static final int SPECIAL_KEY = -1;
 
   private static enum PageRank {
     nodes, edges, massMessages, massMessagesSaved, massMessagesReceived, missingStructure
@@ -90,7 +90,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
     private static final PageRankNode intermediateStructure = new PageRankNode();
 
     // IMC for sourcesRank
-    private float missingMass = Float.NEGATIVE_INFINITY;
+    private float totalMass = Float.NEGATIVE_INFINITY;
 
     private static int numReducers = 0;
 
@@ -124,20 +124,14 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
           neighbor.set(list.get(i));
           intermediateMass.setNodeId(list.get(i));
           intermediateMass.setType(PageRankNode.Type.Mass);
-          intermediateMass.setPageRank((float) (StrictMath.log(1.0f - ALPHA) + mass));
+          intermediateMass.setPageRank(mass);
+          totalMass = sumLogProbs(totalMass, mass);
 
           // Emit messages with PageRank mass to neighbors.
           context.write(neighbor, intermediateMass);
           massMessages++;
 
-          // Handle random jumps by emitting mass to sources
-          sumLogProbs(missingMass, (float) (StrictMath.log(ALPHA) + node.getPageRank()));
         }
-      }
-
-      // Handle dangling nodes by sending entire rank to sources
-      if (node.getAdjacencyList().size() == 0) {
-        sumLogProbs(missingMass, node.getPageRank());
       }
 
       // Bookkeeping.
@@ -147,9 +141,9 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
     @Override
     public void cleanup(Context context) throws IOException, InterruptedException {
-      neighbor.set(SOURCES_KEY);
+      neighbor.set(SPECIAL_KEY);
       intermediateMass.setType(PageRankNode.Type.Mass);
-      intermediateMass.setPageRank(missingMass);
+      intermediateMass.setPageRank(totalMass);
 
       for (int i = 0; i < numReducers; i++) {
         intermediateMass.setNodeId(i);
@@ -197,13 +191,18 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
       Reducer<IntWritable, PageRankNode, IntWritable, PageRankNode> {
     // For keeping track of PageRank mass encountered, so we can compute missing PageRank mass lost
     // through dangling nodes.
+    private static ArrayList<Integer> srcsNID = new ArrayList<>();
     private static int numSources = 0;
+    private float totalMass = Float.NEGATIVE_INFINITY;
     private float missingMass = Float.NEGATIVE_INFINITY;
 
     @Override
     public void setup(Context context) throws IOException, InterruptedException {
       // Parse sources
       String[] srcs = context.getConfiguration().getStrings(SRC_NODES_FIELD);
+      for (int i = 0; i < srcs.length; i++) {
+        srcsNID.add(Integer.parseInt(srcs[i]));
+      }
       numSources = srcs.length;
     }
 
@@ -212,13 +211,20 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
         throws IOException, InterruptedException {
       Iterator<PageRankNode> values = iterable.iterator();
 
-      if (nid.get() == SOURCES_KEY) {
+      if (nid.get() == SPECIAL_KEY) {
         while (values.hasNext()) {
           PageRankNode node = values.next();
-          sumLogProbs(missingMass, node.getPageRank());
+          totalMass = sumLogProbs(totalMass, node.getPageRank());
+        }
+
+        // Calculate missingMass
+        float mMass = 1.0f - (float) StrictMath.exp(totalMass);
+        if (mMass <= 0.0f) {
+          missingMass = 0.0f;
+        } else {
+          missingMass = mMass;
         }
       } else {
-
         // Create the node structure that we're going to assemble back together from shuffled pieces.
         PageRankNode node = new PageRankNode();
 
@@ -245,18 +251,21 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
           }
         }
 
-//      if (srcsNID.contains(nid)) { // source node
-//        float jump = (float) (Math.log(ALPHA) - Math.log(srcsNID.size()));
-//        float link = (float) (Math.log(1.0f - ALPHA) + mass);
-//        mass = sumLogProbs(jump, link);
-//      } else { // normal node
-//        float jump = (float) (Math.log(ALPHA) + Float.NEGATIVE_INFINITY);
-//        float link = (float) (Math.log(1.0f - ALPHA) + mass);
-//        mass = sumLogProbs(jump, link);
-//      }
+        // Handle random jumps and dangling nodes
+        if (srcsNID.contains(nid.get())) {
+          float jump = (float) StrictMath.log(ALPHA);
+          float link;
+          if (missingMass == 0.0f) {
+            link = (float) StrictMath.log(1.0f - ALPHA) + sumLogProbs(mass, Float.NEGATIVE_INFINITY);
+          } else {
+            link = (float) StrictMath.log(1.0f - ALPHA) + sumLogProbs(mass, (float) StrictMath.log(missingMass));
+          }
+          mass = sumLogProbs(jump, link);
+        } else {
+          mass = (float) StrictMath.log(1.0f - ALPHA) + mass;
+        }
 
         // Update the final accumulated PageRank mass.
-        sumLogProbs(mass, missingMass - (float) StrictMath.log(numSources));
         node.setPageRank(mass);
         context.getCounter(PageRank.massMessagesReceived).increment(massMessagesReceived);
 
@@ -287,7 +296,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
   private static class PartitionClass extends Partitioner<IntWritable, PageRankNode> {
     @Override
     public int getPartition(IntWritable key, PageRankNode value, int numReduceTasks) {
-      if (key.get() == SOURCES_KEY) {
+      if (key.get() == SPECIAL_KEY) {
        return value.getNodeId();
       } else {
         return (key.hashCode() & Integer.MAX_VALUE) % numReduceTasks;
