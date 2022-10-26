@@ -66,7 +66,7 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
         private static ArrayList<Integer> srcsNID = new ArrayList<>();
 
         @Override
-        public void setup(Mapper<LongWritable, Text, IntWritable, PageRankNode>.Context context) {
+        public void setup(Context context) throws IOException, InterruptedException {
             int n = context.getConfiguration().getInt(NODE_CNT_FIELD, 0);
             if (n == 0) {
                 throw new RuntimeException(NODE_CNT_FIELD + " cannot be 0!");
