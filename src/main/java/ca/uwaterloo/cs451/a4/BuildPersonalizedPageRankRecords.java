@@ -78,7 +78,6 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
             }
 
             node.setType(PageRankNode.Type.Complete);
-            node.setPageRank(Float.NEGATIVE_INFINITY);
         }
 
         @Override
@@ -90,8 +89,10 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
             nid.set(nodeID);
 
             // Check if current node is a source node
-            if (srcsNID.contains(nid)) {
+            if (srcsNID.contains(nodeID)) {
                 node.setPageRank((float) -StrictMath.log(srcsNID.size()));
+            } else {
+                node.setPageRank(Float.NEGATIVE_INFINITY);
             }
 
             if (arr.length == 1) {
