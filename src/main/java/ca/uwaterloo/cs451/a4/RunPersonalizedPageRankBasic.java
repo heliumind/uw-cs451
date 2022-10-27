@@ -118,6 +118,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
         float mass = node.getPageRank() - (float) StrictMath.log(list.size());
 
         context.getCounter(PageRank.edges).increment(list.size());
+        totalMass = sumLogProbs(totalMass, (float) StrictMath.log(list.size()) + mass);
 
         // Iterate over neighbors.
         for (int i = 0; i < list.size(); i++) {
@@ -125,7 +126,6 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
           intermediateMass.setNodeId(list.get(i));
           intermediateMass.setType(PageRankNode.Type.Mass);
           intermediateMass.setPageRank(mass);
-          totalMass = sumLogProbs(totalMass, mass);
 
           // Emit messages with PageRank mass to neighbors.
           context.write(neighbor, intermediateMass);
@@ -219,11 +219,8 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
         // Calculate missingMass
         float mMass = 1.0f - (float) StrictMath.exp(totalMass);
-        if (mMass <= 0.0f) {
-          missingMass = 0.0f;
-        } else {
-          missingMass = mMass;
-        }
+        missingMass = (float) StrictMath.log(mMass);
+
       } else {
         // Create the node structure that we're going to assemble back together from shuffled pieces.
         PageRankNode node = new PageRankNode();
@@ -253,13 +250,8 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
         // Handle random jumps and dangling nodes
         if (srcsNID.contains(nid.get())) {
-          float jump = (float) StrictMath.log(ALPHA);
-          float link;
-          if (missingMass == 0.0f) {
-            link = (float) StrictMath.log(1.0f - ALPHA) + sumLogProbs(mass, Float.NEGATIVE_INFINITY);
-          } else {
-            link = (float) StrictMath.log(1.0f - ALPHA) + sumLogProbs(mass, (float) StrictMath.log(missingMass));
-          }
+          float jump = (float) (StrictMath.log(ALPHA) - StrictMath.log(numSources));
+          float link = (float) StrictMath.log(1.0f - ALPHA) + sumLogProbs(mass, missingMass - (float) StrictMath.log(numSources));
           mass = sumLogProbs(jump, link);
         } else {
           mass = (float) StrictMath.log(1.0f - ALPHA) + mass;
