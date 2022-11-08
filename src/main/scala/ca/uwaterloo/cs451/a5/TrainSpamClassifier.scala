@@ -40,7 +40,7 @@ object TrainSpamClassifier {
       score
     }
 
-    val trainingSet = sc.textFile(args.input())
+    val trainingSet = sc.textFile(args.input(), 1)
       .map(line => {
         val tokens = line.split(" ")
         val docid = tokens(0)
