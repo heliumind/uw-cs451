@@ -11,6 +11,7 @@ class TrainSpamClassifierConf(args: Seq[String]) extends ScallopConf(args) {
   mainOptions = Seq(input, model)
   val input = opt[String](descr = "input path", required = true)
   val model = opt[String](descr = "output trained model", required = true)
+  val shuffle = opt[Boolean]()
   verify()
 }
 object TrainSpamClassifier {
@@ -40,14 +41,19 @@ object TrainSpamClassifier {
       score
     }
 
-    val trainingSet = sc.textFile(args.input(), 1)
+    var trainingSet = sc.textFile(args.input(), 1)
       .map(line => {
         val tokens = line.split(" ")
         val docid = tokens(0)
         val isSpam = if (tokens(1).trim().equals("spam")) 1 else 0
         val features = tokens.slice(2, tokens.length).map(f => f.toInt)
-        (0, (docid, isSpam, features))
+        val seed = scala.util.Random.nextInt
+        (0, (docid, isSpam, features, seed))
       })
+
+    if (args.shuffle()) {
+      trainingSet = trainingSet.sortBy(pair => pair._2._4)
+    }
 
     val trained = trainingSet
       .groupByKey(1)
