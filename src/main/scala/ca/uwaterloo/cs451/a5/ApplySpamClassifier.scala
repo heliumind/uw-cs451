@@ -44,7 +44,7 @@ object ApplySpamClassifier {
     val weights = sc.broadcast(w)
 
     // Scores a document based on its list of features.
-    def spamminess(features: Array[Int]): Double = {
+    def spamminess(features: Array[Int], w: Map[Int, Double]): Double = {
       var score = 0d
       features.foreach(f => if (w.contains(f)) score += w(f))
       score
@@ -57,7 +57,7 @@ object ApplySpamClassifier {
         val label = tokens(1).trim()
         val features = tokens.slice(2, tokens.length).map(f => f.toInt)
 
-        val score = spamminess(features)
+        val score = spamminess(features, weights.value)
         val prediction = if (score > 0) "spam" else "ham"
 
         (docid, label, score, prediction)
