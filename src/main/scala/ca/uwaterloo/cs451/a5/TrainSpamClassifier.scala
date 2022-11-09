@@ -23,7 +23,7 @@ object TrainSpamClassifier {
     log.info("Input: " + args.input())
     log.info("Model: " + args.model())
 
-    val conf = new SparkConf().setAppName("PMI Pairs")
+    val conf = new SparkConf().setAppName("TrainSpamClassifier")
     val sc = new SparkContext(conf)
 
     val outputDir = new Path(args.model())
