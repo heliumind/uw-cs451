@@ -46,7 +46,7 @@ object Q3 {
           )
         })
         .filter{
-          case(_, _, _, shipdate) => shipdate.contains(date)
+          case(_, _, _, shipdate) => shipdate.equals(date)
         }
 
       val part = partRDD
@@ -109,7 +109,7 @@ object Q3 {
           )
         })
         .filter {
-          case (_, _, _, shipdate) => shipdate.contains(date)
+          case (_, _, _, shipdate) => shipdate.equals(date)
         }
 
       val part = partRDD

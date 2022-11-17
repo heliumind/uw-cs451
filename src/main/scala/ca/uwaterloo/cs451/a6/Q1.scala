@@ -34,7 +34,7 @@ object Q1 {
       val results = sc.textFile(args.input() + "/lineitem.tbl")
         .filter(line => {
           val tokens = line.split("\\|")
-          tokens(10).startsWith(date)
+          tokens(10).equals(date)
         })
         .count()
       println("ANSWER=" + results)
