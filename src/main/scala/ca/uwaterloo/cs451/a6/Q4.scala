@@ -54,7 +54,7 @@ object Q4 {
           )
         })
         .filter {
-          case (_, shipdate) => shipdate.contains(date)
+          case (_, shipdate) => shipdate.equals(date)
         }
 
       val nation = nationRDD
@@ -81,28 +81,22 @@ object Q4 {
       val customerMap = sc.broadcast(customer)
 
       orders.cogroup(lineitem)
-        // Check if join key has multiple values
-        .filter{ case (_, (_, shipdate)) => shipdate.iterator.hasNext}
-        // Create joined tuples
-        .map{ case (_, (custkey, _)) =>
-          (custkey.iterator.next())
+        .filter(pair => pair._2._2.iterator.hasNext)
+        .map { case (orderkey, (custkey, shipdate)) =>
+          var cnt = 0
+          val iter = shipdate.iterator
+          while (iter.hasNext) {
+            cnt += 1
+            iter.next()
+          }
+          (orderkey, custkey.iterator.next(), cnt)
         }
-        .filter(custkey => customerMap.value.contains(custkey))
-        .map(custkey => customerMap.value.getOrElse(custkey, ""))
-        .filter(nationkey => nationMap.value.contains(nationkey))
-        .map(nationkey =>
-          (
-            (nationkey.toInt, // n_nationkey
-            nationMap.value.getOrElse(nationkey, "")), // n_name
-            1
-          )
-        )
+        .map(pair => (customerMap.value(pair._2), pair._3))
         .reduceByKey(_ + _)
-        .sortByKey()
-        .map{ case ((nationkey, name), count) => (nationkey, name, count)}
+        .map(pair => (pair._1.toInt, nationMap.value(pair._1), pair._2))
+        .sortBy(_._1)
         .collect()
         .foreach(println)
-
     }
 
     if (args.parquet()) {
@@ -133,7 +127,7 @@ object Q4 {
           )
         })
         .filter {
-          case (_, shipdate) => shipdate.contains(date)
+          case (_, shipdate) => shipdate.equals(date)
         }
 
       val nation = nationRDD
@@ -158,25 +152,20 @@ object Q4 {
       val customerMap = sc.broadcast(customer)
 
       orders.cogroup(lineitem)
-        // Check if join key has multiple values
-        .filter{ case (_, (_, shipdate)) => shipdate.iterator.hasNext}
-        // Create joined tuples
-        .map{ case (_, (custkey, _)) =>
-          (custkey.iterator.next())
+        .filter(pair => pair._2._2.iterator.hasNext)
+        .map { case (orderkey, (custkey, shipdate)) =>
+          var cnt = 0
+          val iter = shipdate.iterator
+          while (iter.hasNext) {
+            cnt += 1
+            iter.next()
+          }
+          (orderkey, custkey.iterator.next(), cnt)
         }
-        .filter(custkey => customerMap.value.contains(custkey))
-        .map(custkey => customerMap.value.getOrElse(custkey, ""))
-        .filter(nationkey => nationMap.value.contains(nationkey))
-        .map(nationkey =>
-          (
-            (nationkey.toInt, // n_nationkey
-            nationMap.value.getOrElse(nationkey, "")), // n_name
-            1
-          )
-        )
+        .map(pair => (customerMap.value(pair._2), pair._3))
         .reduceByKey(_ + _)
-        .sortByKey()
-        .map{ case ((nationkey, name), count) => (nationkey, name, count)}
+        .map(pair => (pair._1.toInt, nationMap.value(pair._1), pair._2))
+        .sortBy(_._1)
         .collect()
         .foreach(println)
     }
