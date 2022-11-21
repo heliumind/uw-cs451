@@ -36,18 +36,15 @@ object Q3 {
       val supplierRDD = sc.textFile(args.input() + "/supplier.tbl")
 
       val lineitem = lineitemRDD
+        .filter(line => line.split("\\|")(10).equals(date))
         .map(line => {
           val tokens = line.split("\\|")
           (
             tokens(0), // l_orderkey
             tokens(1), // l_partkey
-            tokens(2), // l_suppkey
-            tokens(10)  // l_shipdate
+            tokens(2) // l_suppkey
           )
         })
-        .filter{
-          case(_, _, _, shipdate) => shipdate.equals(date)
-        }
 
       val part = partRDD
         .map(line => {
@@ -57,7 +54,7 @@ object Q3 {
             tokens(1) // p_name
           )
         })
-        .collect().toMap
+        .collectAsMap()
 
       val supplier = supplierRDD
         .map(line => {
@@ -67,22 +64,21 @@ object Q3 {
             tokens(1)  // s_name
           )
         })
-        .collect().toMap
+        .collectAsMap()
 
       val partMap = sc.broadcast(part)
       val supplierMap = sc.broadcast(supplier)
 
-      val result = lineitem
+      lineitem
         .filter{
-          case(_, partkey, suppkey, _) =>
+          case(_, partkey, suppkey) =>
             partMap.value.contains(partkey) && supplierMap.value.contains(suppkey)
         }
         .map{
-          case(l_orderkey, l_partkey, l_suppkey, _) => {
-            val s_name = supplierMap.value.getOrElse(l_suppkey, "")
-            val p_name = partMap.value.getOrElse(l_partkey, "")
+          case(l_orderkey, l_partkey, l_suppkey) =>
+            val s_name = supplierMap.value(l_suppkey)
+            val p_name = partMap.value(l_partkey)
             (l_orderkey.toInt, p_name, s_name)
-          }
         }
         .sortBy(_._1)
         .take(20)
@@ -100,17 +96,14 @@ object Q3 {
       val supplierRDD = supplierDF.rdd
 
       val lineitem = lineitemRDD
+        .filter(row => row(10).toString.equals(date))
         .map(row => {
           (
             row(0).toString, // l_orderkey
             row(1).toString, // l_partkey
-            row(2).toString, // l_suppkey
-            row(10).toString // l_shipdate
+            row(2).toString // l_suppkey
           )
         })
-        .filter {
-          case (_, _, _, shipdate) => shipdate.equals(date)
-        }
 
       val part = partRDD
         .map(row => {
@@ -119,7 +112,7 @@ object Q3 {
             row(1).toString // p_name
           )
         })
-        .collect().toMap
+        .collectAsMap
 
       val supplier = supplierRDD
         .map(row => {
@@ -128,27 +121,21 @@ object Q3 {
             row(1).toString // s_name
           )
         })
-        .collect().toMap
+        .collectAsMap()
 
       val partMap = sc.broadcast(part)
       val supplierMap = sc.broadcast(supplier)
 
-      val result = lineitem
-        .filter {
-          case (_, partkey, suppkey, _) =>
-            partMap.value.contains(partkey) && supplierMap.value.contains(suppkey)
-        }
-        .map {
-          case (l_orderkey, l_partkey, l_suppkey, _) => {
-            val s_name = supplierMap.value.getOrElse(l_suppkey, "")
-            val p_name = partMap.value.getOrElse(l_partkey, "")
+      lineitem
+        .map{
+          case(l_orderkey, l_partkey, l_suppkey) =>
+            val s_name = supplierMap.value(l_suppkey)
+            val p_name = partMap.value(l_partkey)
             (l_orderkey.toInt, p_name, s_name)
-          }
         }
         .sortBy(_._1)
         .take(20)
         .foreach(println)
-
     }
 
   }
