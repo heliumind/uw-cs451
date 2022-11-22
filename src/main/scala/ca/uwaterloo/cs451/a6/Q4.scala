@@ -82,14 +82,8 @@ object Q4 {
 
       orders.cogroup(lineitem)
         .filter(pair => pair._2._2.iterator.hasNext)
-        .map { case (orderkey, (custkey, shipdate)) =>
-          var cnt = 0
-          val iter = shipdate.iterator
-          while (iter.hasNext) {
-            cnt += 1
-            iter.next()
-          }
-          (orderkey, custkey.iterator.next(), cnt)
+        .flatMap { case (orderkey, (custkeys, shipdates)) =>
+          custkeys.flatMap(custkey => shipdates.map(_ => (orderkey, custkey, 1)))
         }
         .map(pair => (customerMap.value(pair._2), pair._3))
         .reduceByKey(_ + _)
@@ -153,14 +147,8 @@ object Q4 {
 
       orders.cogroup(lineitem)
         .filter(pair => pair._2._2.iterator.hasNext)
-        .map { case (orderkey, (custkey, shipdate)) =>
-          var cnt = 0
-          val iter = shipdate.iterator
-          while (iter.hasNext) {
-            cnt += 1
-            iter.next()
-          }
-          (orderkey, custkey.iterator.next(), cnt)
+        .flatMap { case (orderkey, (custkeys, shipdates)) =>
+          custkeys.flatMap(custkey => shipdates.map(_ => (orderkey, custkey, 1)))
         }
         .map(pair => (customerMap.value(pair._2), pair._3))
         .reduceByKey(_ + _)
