@@ -49,14 +49,14 @@ object Q2 {
           case(_, shipdate) => shipdate.equals(date)
         }
 
-      val results = orders.cogroup(lineitem)
+      lineitem.cogroup(orders)
         // Check if join key has multiple values
-        .filter(pair => pair._2._2.iterator.hasNext)
+        .filter(pair => pair._2._1.iterator.hasNext)
         // Create joined tuples
-        .map(pair =>
-          (pair._1.toInt, pair._2._1.iterator.next()))
-        .sortByKey()
-        .map(pair => (pair._2, pair._1))
+        .flatMap { case (orderkey, (shipdates, clerks)) =>
+          for (_ <- shipdates; clerk <- clerks) yield (clerk, orderkey.toInt)
+        }
+        .sortBy(_._2)
         .take(20)
         .foreach(println)
 
@@ -83,14 +83,14 @@ object Q2 {
           case (_, shipdate) => shipdate.equals(date)
         }
 
-      val results = orders.cogroup(lineitem)
+      lineitem.cogroup(orders)
         // Check if join key has multiple values
-        .filter(pair => pair._2._2.iterator.hasNext)
+        .filter(pair => pair._2._1.iterator.hasNext)
         // Create joined tuples
-        .map(pair =>
-          (pair._1.toInt, pair._2._1.iterator.next()))
-        .sortByKey()
-        .map(pair => (pair._2, pair._1))
+        .flatMap { case (orderkey, (shipdates, clerks)) =>
+          for (_ <- shipdates; clerk <- clerks) yield (clerk, orderkey.toInt)
+        }
+        .sortBy(_._2)
         .take(20)
         .foreach(println)
 
