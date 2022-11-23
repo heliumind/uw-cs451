@@ -40,7 +40,7 @@ object RegionEventCount {
   val log = Logger.getLogger(getClass().getName())
 
   def main(argv: Array[String]): Unit = {
-    val args = new EventCountConf(argv)
+    val args = new RegionEventCountConf(argv)
 
     log.info("Input: " + args.input())
 
