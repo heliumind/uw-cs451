@@ -28,19 +28,11 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
-class RegionEventCountConf(args: Seq[String]) extends ScallopConf(args) {
-  mainOptions = Seq(input, checkpoint, output)
-  val input = opt[String](descr = "input path", required = true)
-  val checkpoint = opt[String](descr = "checkpoint path", required = true)
-  val output = opt[String](descr = "output path", required = true)
-  verify()
-}
-
 object RegionEventCount {
   val log = Logger.getLogger(getClass().getName())
 
   def main(argv: Array[String]): Unit = {
-    val args = new RegionEventCountConf(argv)
+    val args = new EventCountConf(argv)
 
     log.info("Input: " + args.input())
 
