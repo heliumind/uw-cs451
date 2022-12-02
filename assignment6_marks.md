@@ -59,7 +59,7 @@ WATIAM:h26he
 
 **Test 27** Q7 test 2 (Linux/Text) mark: 2.0/2
 
-**Test 28** Q1 test 1 (Datasci/Parquet) mark: 0.0/1.25
+**Test 28** Q1 test 1 (Datasci/Parquet) mark: 1.25/1.25
 
 **Test 29** Q1 test 1 (Datasci/Text) mark: 1.25/1.25
 
@@ -83,7 +83,7 @@ WATIAM:h26he
 
 **Test 39** Q3 test 2 (Datasci/Text) mark: 1.25/1.25
 
-**Test 40** Q4 test 1 (Datasci/Parquet) mark: 1.25/1.75
+**Test 40** Q4 test 1 (Datasci/Parquet) mark: 1.75/1.75
 
 **Test 41** Q4 test 1 (Datasci/Text mark: 1.75/1.75
 
@@ -91,11 +91,11 @@ WATIAM:h26he
 
 **Test 43** Q4 test 2 (Datasci/Text mark: 1.75/1.75
 
-**Test 44** Q5 test 1 (Datasci/Parquet) mark: 1.75/3.5
+**Test 44** Q5 test 1 (Datasci/Parquet) mark: 3.5/3.5
 
 **Test 45** Q5 test 1 (Datasci/Text) mark: 3.5/3.5
 
-**Test 46** Q6 test 1 (Datasci/Parquet) mark: 3.5/2
+**Test 46** Q6 test 1 (Datasci/Parquet) mark: 2.0/2
 
 **Test 47** Q6 test 1 (Datasci/Text) mark: 2.0/2
 
@@ -116,6 +116,6 @@ WATIAM:h26he
 **Feedback :** 
 
 **Final grade**
-mark: 98.0/100.0
+mark: 100.0/100.0
 
-summary: 21047901,h26he,98.0/100.0
+summary: 21047901,h26he,100.0/100.0
